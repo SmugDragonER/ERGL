@@ -92,7 +92,7 @@ class Game:
         return game_dict
     @classmethod
     def from_dict(cls, d):
-        return cls(game_id=d["game_id"],date=date.isoformat(d["date"]), entries = [GameEntryPerTeam.from_dict(e) for e in d["entries"]])
+        return cls(game_id=d["game_id"],date=date.fromisoformat(d["date"]), entries = [GameEntryPerTeam.from_dict(e) for e in d["entries"]])
 
 
 @dataclass
