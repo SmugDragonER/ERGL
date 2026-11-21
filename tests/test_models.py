@@ -71,6 +71,55 @@ class TestGameEntryPerTeam(unittest.TestCase):
         self.assertEqual(make_entry("A", 23.5).total_score, 23.5)
 
 
+class TestSerialization(unittest.TestCase):
+    """to_dict() -> from_dict() must give back exactly the same object."""
+
+    def setUp(self):
+        self.entry = make_entry("A", 23.5, p1_tk=4, p2_tk=16, headbooms=2, placement=3,
+                                characters=["Darko", "Emma"])
+        self.entry.replay_code = "ABC123"
+        self.entry.checkpoint = True
+        self.game = Game(game_id=63716452, date=date(2026, 11, 21),
+                         entries=[self.entry, make_entry("B", 10)])
+
+    def test_entry_to_dict_returns_dict(self):
+        self.assertIsInstance(self.entry.to_dict(), dict)
+
+    def test_entry_to_dict_stores_team_as_dict(self):
+        self.assertIsInstance(self.entry.to_dict()["team"], dict)
+
+    def test_entry_to_dict_does_not_store_total_score(self):
+        self.assertNotIn("total_score", self.entry.to_dict())
+
+    def test_entry_roundtrip(self):
+        self.assertEqual(GameEntryPerTeam.from_dict(self.entry.to_dict()), self.entry)
+
+    def test_entry_from_dict_fills_defaults_for_missing_optional_fields(self):
+        minimal = {"team": {"team_name": "A"}, "characters_used": [], "csv_points": 5, "placement": 1}
+        entry = GameEntryPerTeam.from_dict(minimal)
+        self.assertEqual(entry.headbooms, 0)
+        self.assertEqual(entry.p1_tk, 0)
+        self.assertFalse(entry.checkpoint)
+        self.assertIsNone(entry.replay_code)
+
+    def test_game_to_dict_returns_dict(self):
+        self.assertIsInstance(self.game.to_dict(), dict)
+
+    def test_game_to_dict_stores_date_as_text(self):
+        self.assertEqual(self.game.to_dict()["date"], "2026-11-21")
+
+    def test_game_to_dict_stores_entries_as_dicts(self):
+        entries = self.game.to_dict()["entries"]
+        self.assertEqual(len(entries), 2)
+        self.assertIsInstance(entries[0], dict)
+
+    def test_game_roundtrip(self):
+        self.assertEqual(Game.from_dict(self.game.to_dict()), self.game)
+
+    def test_game_from_dict_gives_real_date(self):
+        self.assertIsInstance(Game.from_dict(self.game.to_dict()).date, date)
+
+
 class TestGame(unittest.TestCase):
     def setUp(self):
         self.game = Game(

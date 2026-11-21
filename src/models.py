@@ -27,8 +27,8 @@ class Team:
         return team_dict
 
     @classmethod
-    def from_dict(team, d):    
-        return team(team_name = d["team_name"], account_names = d.get("account_names", []))
+    def from_dict(cls, d):    
+        return cls(team_name = d["team_name"], account_names = d.get("account_names", []))
     
 
 @dataclass
@@ -48,6 +48,24 @@ class GameEntryPerTeam:
     def total_score(self) -> float:
         return self.csv_points - self.headbooms * HEADBOOM_PENALTY
 
+    def to_dict(self):
+        game_entry_per_team_dict = {
+            "team" : self.team.to_dict(),
+            "characters_used": self.characters_used,
+            "csv_points": self.csv_points,
+            "placement": self.placement,
+            "checkpoint": self.checkpoint,
+            "headbooms": self.headbooms,
+            "p1_tk": self.p1_tk,
+            "p2_tk": self.p2_tk,
+            "replay_code": self.replay_code
+        }
+        return game_entry_per_team_dict
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(team = Team.from_dict(d["team"]), characters_used=d.get("characters_used",[]),csv_points=d["csv_points"], placement = d["placement"], checkpoint=d.get("checkpoint", False), headbooms=d.get("headbooms",0), p1_tk=d.get("p1_tk",0), p2_tk=d.get("p2_tk",0), replay_code=d.get("replay_code",None))
+
 
 @dataclass
 class Game:
@@ -64,6 +82,17 @@ class Game:
         for e in self.entries:
             all_characters.extend(e.characters_used)
         return Counter(all_characters)
+
+    def to_dict(self):
+        game_dict =  {
+            "game_id": self.game_id,
+            "date": self.date.isoformat(),
+            "entries": [entry.to_dict() for entry in self.entries]
+        }
+        return game_dict
+    @classmethod
+    def from_dict(cls, d):
+        return cls(game_id=d["game_id"],date=date.isoformat(d["date"]), entries = [GameEntryPerTeam.from_dict(e) for e in d["entries"]])
 
 
 @dataclass
