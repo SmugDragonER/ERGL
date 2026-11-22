@@ -1,40 +1,113 @@
-# Leaderboard Renderer
+# ERGL – Tournament Leaderboard Tool
 
-This small Python utility reads a CSV file with names and scores, and renders a leaderboard onto a PNG background.
-(Ai was used to generate some functions in services.py and to create the test_extract)
-Usage
------
+Turns the CSV files that the game exports after each match into a finished leaderboard image.
 
-Install dependencies:
+- Import all game CSVs of a tournament with one click
+- Overall standings across all games (points, Phase 1 TK, Phase 2+ TK)
+- Headboom penalties per team and game
+- Checkpoint teams highlighted in red
+- Character bans for the next game
+- Exports the standings onto the leaderboard template as a PNG
+
+---
+
+## Download (Windows)
+
+1. Go to the **[Releases page](https://github.com/SmugDragonER/ERGL/releases)** and download the latest `EU_DOJO.zip`.
+2. Unzip it into **its own folder**, for example `Documents\ERGL\`.
+3. Double-click `EU_DOJO.exe`.
+
+No Python or other installation needed.
+
+> **Windows warning "Windows protected your PC"?**
+> The program is not signed, so Windows does not know it yet.
+> Click **More info → Run anyway**. Some virus scanners also flag tools like this by mistake.
+
+> **Your data** is saved in `tournament_db.json` **next to the .exe**.
+> Keep this file to keep your tournament data. When you update to a new version, copy it into the new folder.
+
+---
+
+## How to use
+
+1. **Tournament**: enter a name, e.g. `EU_DOJO_NR_1`. Each name is its own separate tournament.
+2. **Choose folder…**: select the folder with the game's CSV files.
+3. **Import CSVs**: reads every CSV in the folder. Games that are already saved are skipped, so you can simply re-import the whole folder after every new game.
+4. Check the tabs:
+   - **Standings**: the overall ranking. Checkpoint teams are red.
+   - **Headbooms**: choose a game, then double-click a team to enter its headbooms for that game.
+   - **Bans**: the characters that are banned for the next game.
+5. **Create PNG**: choose where to save the image. Tick *Open image afterwards* to see it right away.
+
+### Rules used
+
+| Rule | Value |
+|---|---|
+| Ranking | Total points, ties broken by most kills (Phase 1 TK + Phase 2+ TK), then coinflip |
+| Headboom penalty | −5 points per headboom, in the game where it happened |
+| Checkpoint | Before game 5: top 2 · game 6: top 3 · game 7: top 5 · game 8: top 7 · game 9: top 8 |
+| Character bans | A character picked **3 times in one game** (all teams together) is banned for the next game. Every extra pick adds one more game (3 + n picks → 1 + n games). Bans run out game by game. |
+
+The order of the games is taken from the `gameId` in the CSVs.
+
+---
+
+## For developers
+
+### Run from source
+
+Requires Python 3.10+.
 
 ```bash
 pip install -r requirements.txt
+python gui.py
 ```
 
-Run with the sample CSV (generates a default background if none provided):
+### Tests
+
+Run from the project root:
 
 ```bash
-python main.py sample.csv --out leaderboard.png --title "Top Players" --top 5
+python -m unittest discover -s tests -v
 ```
 
-Options
--------
-- `csv` : path to CSV file (required). The CSV must have a header; columns commonly named `name` and `score`.
-- `--background` / `-b` : optional background PNG. If omitted the script generates `default_bg.png`.
-- `--out` / `-o` : output PNG path (default `leaderboard.png`).
-- `--title` / `-t` : title text to show on the image.
-- `--top` : how many top rows to display.
-- `--font` : path to a TTF font file to use for nicer typography.
+### Build the .exe
 
-Notes
------
-- The script uses Pillow to draw text. If you provide a `.ttf` font with `--font` the title and entries will be rendered with it; otherwise the PIL default font is used.
+```bash
+pip install pyinstaller
+pyinstaller --onefile --windowed --name EU_DOJO --add-data "assets;assets" gui.py
+```
 
-### Domain model
+The result is `dist/EU_DOJO.exe`. Do not commit `build/` or `dist/`. Upload the zipped `.exe` as a GitHub Release instead.
 
-See [MODEL_STRUCTURE.md](MODEL_STRUCTURE.md) for a class diagram and the data
-flow between the domain models, CSV/JSON inputs, persistence, and PNG output.
+### Project structure
 
-### TODO:
-- make it easy for users to use
-- add a json file for people to customize (e.g. PNG path, CSV location, )
+```
+gui.py              Window (tkinter), only calls the functions in main.py
+main.py             Entry points: import_csv, show_standings, create_png, show_bans, set_headbooms
+src/
+  models.py         Team, GameEntryPerTeam, Game, TeamStanding, Leaderboard (standings, checkpoints, bans)
+  services.py       Reads a CSV and builds a Game from it
+  db_service.py     Saves and loads games with TinyDB (tournament_db.json)
+  generate_png.py   Draws the standings onto assets/Leaderboard.png
+assets/             Leaderboard template, fonts, sample CSV
+tests/              Unit tests
+CSV_Bible.md        Which CSV column means what
+```
+
+Data flow:
+
+```
+CSV  →  Game  →  TinyDB  →  Leaderboard  →  standings / bans  →  GUI + PNG
+```
+
+Totals, checkpoints and bans are never stored. They are calculated from the saved games every time.
+
+### AI usage
+
+The core logic (`models.py`, `services.py`, `db_service.py`, `generate_png.py`, `main.py`) was written by hand.
+The GUI (`gui.py`), all tests in `tests/` and a few helper functions were generated with AI (Claude). They are marked as AI-generated in the files.
+
+### Font
+
+[Montserrat](assets/fonts/Montserrat/OFL.txt), licensed under the SIL Open Font License.
