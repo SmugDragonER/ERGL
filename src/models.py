@@ -11,7 +11,7 @@ Data models for the tournament system.
 
 # CONSTANTS
 HEADBOOM_PENALTY = 5
-
+CHECKPOINT_TEAMS = {5: 2, 6: 3, 7: 5, 8: 7, 9: 8}
 
 @dataclass
 class Team:
@@ -102,6 +102,7 @@ class TeamStanding:
     p1_tk: int
     p2_tk: int
     rank: int = 0
+    checkpoint: bool = False
 
 
 
@@ -150,6 +151,10 @@ class Leaderboard:
             scorelist.append(standing)
 
         scorelist.sort(key=lambda s: (-s.points, -(s.p1_tk + s.p2_tk)))
+
+        checkpoint_teams = CHECKPOINT_TEAMS.get(len(self.games), 0)
         for i, s in enumerate(scorelist, start = 1):
             s.rank = i
+            if checkpoint_teams > 0:
+                s.checkpoint = i <= checkpoint_teams
         return scorelist

@@ -13,7 +13,9 @@ NAME_X = 155
 PHASE_1_TK_X = 570
 PHASE_2_TK_X = 770
 TOTAL_PTS_X = 940
-COLOR = (255,255,255)
+COLOR_WHITE = (255,255,255)
+COLOR_RED = "#fd6160"
+COLOR_GOLD = "#ffd084"
 
 # Team names shrink when they are too wide for the name column
 NAME_FONT_SIZE = 30
@@ -36,12 +38,13 @@ def fit_font(draw, text, max_width):
 def draw_row(draw, i, standing, font):
     name = str(standing.team.team_name)
     font_name = fit_font(draw, name, NAME_MAX_WIDTH)
-
-    draw.text((RANK_X,get_y(i)),"#"+str(standing.rank), font=font, fill="#fd6160", anchor="lm")
-    draw.text((NAME_X,get_y(i)),name, font=font_name, fill=COLOR, anchor="lm")
-    draw.text((PHASE_1_TK_X,get_y(i)),str(standing.p1_tk), font=font, fill=COLOR, anchor="lm")
-    draw.text((PHASE_2_TK_X,get_y(i)),str(standing.p2_tk), font=font, fill=COLOR, anchor="lm")
-    draw.text((TOTAL_PTS_X,get_y(i)),f"{standing.points:g}", font=font, fill="#ffd084", anchor="lm")
+    draw.text((RANK_X,get_y(i)),"#"+str(standing.rank), font=font, fill=COLOR_RED, anchor="lm")
+    if standing.checkpoint is True:
+        draw.text((NAME_X,get_y(i)),name, font=font_name, fill=COLOR_RED, anchor="lm")
+    else: draw.text((NAME_X,get_y(i)),name, font=font_name, fill=COLOR_WHITE, anchor="lm")
+    draw.text((PHASE_1_TK_X,get_y(i)),str(standing.p1_tk), font=font, fill=COLOR_WHITE, anchor="lm")
+    draw.text((PHASE_2_TK_X,get_y(i)),str(standing.p2_tk), font=font, fill=COLOR_WHITE, anchor="lm")
+    draw.text((TOTAL_PTS_X,get_y(i)),f"{standing.points:g}", font=font, fill=COLOR_GOLD, anchor="lm")
     
 def create_png(standings, output_path):
     font = ImageFont.truetype(FONT_PATH_REST, 35)

@@ -6,6 +6,8 @@ def import_csv(csv_path, tournament_id):
     built_game = src.services.build_game_from_csv(csv_data)
     if not src.db_service.is_game_saved(tournament_id=tournament_id, game_id=built_game.game_id):
         src.db_service.save_game(tournament_id=tournament_id, game=built_game)
+        return True     # new game saved
+    return False        # game was already in the DB
 
 
 def show_standings(tournament_id):
