@@ -131,6 +131,21 @@ class Leaderboard:
     def team_total_score(self, team_name: str) -> float:
         return sum(e.total_score for e in self.team_entries(team_name))
 
+    def banned_characters(self):
+
+        banned = {}
+        for eachgame in sorted(self.games, key=lambda g: g.game_id):
+            character_dict = eachgame.character_counters() #get alle used characters
+
+            banned = {char: rest - 1 for char, rest in banned.items() if rest -1 > 0} #reduce every ban counter by 1 by creating a new dict with every value -1 (this is the only way I can delete stuff out of the dict without issues)
+            for character, picked in character_dict.items():
+                if picked >= 3:
+                    banned_until = (picked - 2)
+                    banned[character] = max(banned.get(character, 0), banned_until)
+        
+        return banned
+        
+
     def overall_standings(self):
         all_team_data = {}
         for game in self.games:
@@ -152,7 +167,7 @@ class Leaderboard:
 
         scorelist.sort(key=lambda s: (-s.points, -(s.p1_tk + s.p2_tk)))
 
-        checkpoint_teams = CHECKPOINT_TEAMS.get(len(self.games), 0)
+        checkpoint_teams = CHECKPOINT_TEAMS.get(len(self.games) + 1, 0)
         for i, s in enumerate(scorelist, start = 1):
             s.rank = i
             if checkpoint_teams > 0:
