@@ -77,3 +77,8 @@ ehthumbs.db
 
 # Generated images / outputs
 *.png
+
+
+build/
+dist/
+EU_DOJO.spec
