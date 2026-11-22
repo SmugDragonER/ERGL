@@ -18,6 +18,21 @@ def create_png(tournament_id, output_path):
     standings = show_standings(tournament_id)
     src.generate_png.create_png(standings, output_path)
 
+
+def load_games(tournament_id):
+    """All games of a tournament, oldest first (sorted by game_id)."""
+    tournament = src.db_service.load_leaderboard(tournament_id=tournament_id)
+    return sorted(tournament.games, key=lambda g: g.game_id)
+
+
+def show_bans(tournament_id):
+    tournament = src.db_service.load_leaderboard(tournament_id=tournament_id)
+    return tournament.banned_characters()
+
+
+def set_headbooms(tournament_id, game_id, team_name, headbooms):
+    src.db_service.set_headbooms(tournament_id, game_id, team_name, headbooms)
+
 if __name__ == "__main__":
     import_csv("assets/Game 1.csv", "EU_DOJO_NR_1")
     for s in show_standings("EU_DOJO_NR_1"):

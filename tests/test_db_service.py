@@ -26,8 +26,8 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-from src.db_service import is_game_saved, load_leaderboard, save_game
-from src.models import Game, GameEntryPerTeam, Leaderboard, Team
+from src.db_service import is_game_saved, load_leaderboard, save_game, set_headbooms
+from src.models import HEADBOOM_PENALTY, Game, GameEntryPerTeam, Leaderboard, Team
 
 TOURNAMENT = "TEST_TOURNAMENT"
 
@@ -189,6 +189,55 @@ class TestLoadLeaderboard(DbTestCase):
         save_game("SEASON_2", make_game(2), db_path=self.db_path)
         lb = load_leaderboard("SEASON_1", db_path=self.db_path)
         self.assertEqual([g.game_id for g in lb.games], [1])
+
+
+class TestSetHeadbooms(DbTestCase):
+    def setUp(self):
+        super().setUp()
+        save_game(TOURNAMENT, make_game(1), db_path=self.db_path)
+
+    def entry(self, team_name, game_id=1):
+        game = next(g for g in load_leaderboard(TOURNAMENT, db_path=self.db_path).games
+                    if g.game_id == game_id)
+        return next(e for e in game.entries if e.team.team_name == team_name)
+
+    def test_sets_headbooms_for_the_team(self):
+        set_headbooms(TOURNAMENT, 1, "Alpha", 2, db_path=self.db_path)
+        self.assertEqual(self.entry("Alpha").headbooms, 2)
+
+    def test_other_teams_stay_unchanged(self):
+        set_headbooms(TOURNAMENT, 1, "Alpha", 2, db_path=self.db_path)
+        self.assertEqual(self.entry("Beta").headbooms, 0)
+
+    def test_can_be_changed_again(self):
+        set_headbooms(TOURNAMENT, 1, "Alpha", 2, db_path=self.db_path)
+        set_headbooms(TOURNAMENT, 1, "Alpha", 0, db_path=self.db_path)
+        self.assertEqual(self.entry("Alpha").headbooms, 0)
+
+    def test_only_changes_the_given_game(self):
+        save_game(TOURNAMENT, make_game(2), db_path=self.db_path)
+        set_headbooms(TOURNAMENT, 2, "Alpha", 1, db_path=self.db_path)
+        self.assertEqual(self.entry("Alpha", game_id=1).headbooms, 0)
+        self.assertEqual(self.entry("Alpha", game_id=2).headbooms, 1)
+
+    def test_does_not_create_a_duplicate_game(self):
+        set_headbooms(TOURNAMENT, 1, "Alpha", 2, db_path=self.db_path)
+        self.assertEqual(len(self.read_raw_file()[TOURNAMENT]), 1)
+
+    def test_points_are_deducted_in_standings(self):
+        set_headbooms(TOURNAMENT, 1, "Alpha", 2, db_path=self.db_path)
+        alpha = next(s for s in load_leaderboard(TOURNAMENT, db_path=self.db_path).overall_standings()
+                     if s.team.team_name == "Alpha")
+        self.assertEqual(alpha.points, 28 - 2 * HEADBOOM_PENALTY)
+
+    def test_unknown_game_raises_value_error(self):
+        with self.assertRaises(ValueError):
+            set_headbooms(TOURNAMENT, 999, "Alpha", 1, db_path=self.db_path)
+
+    def test_unknown_team_changes_nothing(self):
+        set_headbooms(TOURNAMENT, 1, "Nobody", 3, db_path=self.db_path)
+        self.assertEqual(self.entry("Alpha").headbooms, 0)
+        self.assertEqual(self.entry("Beta").headbooms, 0)
 
 
 if __name__ == "__main__":

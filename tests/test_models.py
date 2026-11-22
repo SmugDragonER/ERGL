@@ -254,5 +254,61 @@ class TestLeaderboard(unittest.TestCase):
         self.assertEqual(first, second)
 
 
+class TestBannedCharacters(unittest.TestCase):
+    """Rule: 3 picks in ONE game (all teams together) -> banned for the next game,
+    every extra pick bans it for one more game. Bans run out game by game."""
+
+    def game(self, game_id, *picks):
+        """Build a game where each argument is the character list of one team."""
+        return Game(game_id, date(2026, 1, 1),
+                    [make_entry(f"Team{i}", 0, characters=list(p)) for i, p in enumerate(picks)])
+
+    def bans(self, *games):
+        return Leaderboard("Bans", date(2026, 1, 1), list(games)).banned_characters()
+
+    def test_no_games_no_bans(self):
+        self.assertEqual(self.bans(), {})
+
+    def test_two_picks_are_not_banned(self):
+        self.assertEqual(self.bans(self.game(1, ["Darko", "Emma"], ["Darko", "Karla"])), {})
+
+    def test_three_picks_ban_for_one_game(self):
+        g = self.game(1, ["Darko", "Emma", "Karla"], ["Darko", "Rio"], ["Darko"])
+        self.assertEqual(self.bans(g), {"Darko": 1})
+
+    def test_picks_are_counted_across_all_teams(self):
+        # nobody picked Darko 3 times alone, but together it is 3 -> global ban
+        g = self.game(1, ["Darko"], ["Darko"], ["Darko"])
+        self.assertEqual(self.bans(g), {"Darko": 1})
+
+    def test_each_extra_pick_adds_one_game(self):
+        # 3 + n picks -> 1 + n games
+        g = self.game(1, ["Darko", "Darko"], ["Darko", "Darko"], ["Darko"])   # 5 picks
+        self.assertEqual(self.bans(g), {"Darko": 3})
+
+    def test_ban_counts_down_and_runs_out(self):
+        g1 = self.game(1, ["Darko", "Darko"], ["Darko", "Darko"])   # 4 picks -> 2 games
+        self.assertEqual(self.bans(g1), {"Darko": 2})
+        self.assertEqual(self.bans(g1, self.game(2, ["Emma"])), {"Darko": 1})
+        self.assertEqual(self.bans(g1, self.game(2, ["Emma"]), self.game(3, ["Emma"])), {})
+
+    def test_overlapping_bans_keep_the_longer_one(self):
+        g1 = self.game(1, ["Darko"] * 5)    # 5 picks -> 3 games
+        g2 = self.game(2, ["Darko"] * 3)    # 3 picks -> 1 game (should not shorten the ban)
+        # after g2: old ban 3-1 = 2, new ban 1 -> keep 2
+        self.assertEqual(self.bans(g1, g2), {"Darko": 2})
+
+    def test_games_are_processed_in_game_id_order(self):
+        old = self.game(1, ["Darko"] * 3)      # ban for 1 game
+        new = self.game(2, ["Emma"])
+        # added in the wrong order: the result must be the same as in the right order
+        self.assertEqual(self.bans(new, old), self.bans(old, new))
+        self.assertEqual(self.bans(new, old), {})
+
+    def test_several_characters(self):
+        g = self.game(1, ["Darko", "Emma", "Karla"], ["Darko", "Emma", "Karla"], ["Darko", "Emma", "Rio"])
+        self.assertEqual(self.bans(g), {"Darko": 1, "Emma": 1})
+
+
 if __name__ == "__main__":
     unittest.main()
