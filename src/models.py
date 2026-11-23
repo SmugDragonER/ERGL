@@ -104,8 +104,6 @@ class TeamStanding:
     rank: int = 0
     checkpoint: bool = False
 
-
-
 @dataclass
 class Leaderboard:
     """Aggregates multiple games into a tournament leaderboard.

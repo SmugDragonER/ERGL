@@ -84,3 +84,4 @@ dist/
 EU_DOJO.spec
 .assets/Game 1.csv
 .assets/template.png
+assets/*.csv

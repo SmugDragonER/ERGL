@@ -18,23 +18,21 @@ from src.paths import ASSET_DIR, FONT_DIR, LAYOUT_PATH
 # COLOR_RED = "#fd6160"
 # COLOR_GOLD = "#ffd084"
 
-with open(LAYOUT_PATH, encoding="utf-8") as f:
-    layout = json.load(f)
 
-TEMPLATE = ASSET_DIR / layout["template"]
 
-FIRST_ROW_Y = layout["first_row_y"]
-ROW_SPACEING = layout["row_spacing"]
 
 # Team names shrink when they are too wide for the name column
-NAME_FONT_SIZE = layout["columns"]["name"]["size"]
-NAME_MIN_SIZE = layout["columns"]["name"]["min_size"]
-NAME_MAX_WIDTH = layout["columns"]["name"]["max_width"]
+# NAME_FONT_SIZE = layout["columns"]["name"]["size"]
+# NAME_MIN_SIZE = layout["columns"]["name"]["min_size"]
+# NAME_MAX_WIDTH = layout["columns"]["name"]["max_width"]
 
-
+def load_layout():
+    with open(LAYOUT_PATH, encoding="utf-8") as f:
+        layout = json.load(f)
+        return layout
     
-def get_y(i):
-    return FIRST_ROW_Y + i * ROW_SPACEING
+def get_y(i, layout):
+    return layout["first_row_y"] + i * layout["row_spacing"]
 
 def fit_font(draw, text, namecolumn):
     """AI-GENERATED: Return the biggest name font (down to NAME_MIN_SIZE) in which text fits into max_width."""
@@ -46,7 +44,7 @@ def fit_font(draw, text, namecolumn):
         font = ImageFont.truetype(FONT_DIR / namecolumn["font"], size)
     return font
 
-def draw_row(draw, i, standing):
+def draw_row(draw, i, standing, layout):
     name = str(standing.team.team_name)
     font_name = fit_font(draw, name, layout["columns"]["name"])
 
@@ -67,11 +65,17 @@ def draw_row(draw, i, standing):
         else:
             font = ImageFont.truetype(FONT_DIR / col["font"], col["size"])
         
-        draw.text((col["x"],get_y(i)), values[col_name], font=font, fill=color, anchor=col["anchor"])
+        draw.text((col["x"],get_y(i, layout)), values[col_name], font=font, fill=color, anchor=col["anchor"])
 
 def create_png(standings, output_path):
-    img = Image.open(TEMPLATE)
+    
+    img = render_png(standings)
+    img.save(output_path)
+
+def render_png(standings):
+    layout = load_layout()
+    img = Image.open(ASSET_DIR /layout["template"])
     draw = ImageDraw.Draw(img)
     for i, team in enumerate(standings):
-        draw_row(draw, i, team)
-    img.save(output_path)
+        draw_row(draw, i, team, layout)
+    return img

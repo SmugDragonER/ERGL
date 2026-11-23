@@ -33,6 +33,10 @@ def show_bans(tournament_id):
 def set_headbooms(tournament_id, game_id, team_name, headbooms):
     src.db_service.set_headbooms(tournament_id, game_id, team_name, headbooms)
 
+def preview_png(tournament_id):
+    standings = show_standings(tournament_id)
+    return src.generate_png.render_png(standings)
+
 if __name__ == "__main__":
     import_csv("assets/Game 1.csv", "EU_DOJO_NR_1")
     for s in show_standings("EU_DOJO_NR_1"):
