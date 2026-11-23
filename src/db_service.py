@@ -1,18 +1,7 @@
 from datetime import date
 from tinydb import TinyDB, Query
 from src.models import Game, Leaderboard
-from pathlib import Path
-import sys
-
-
-# Needed for Pyinstaller
-if getattr(sys, "frozen", False): #running as exe?
-    BASE_DIR = Path(sys.executable).parent # folder where the EXE is
-else:
-    BASE_DIR = Path(__file__).parent.parent # normal project folder
-
-
-DB_PATH = BASE_DIR / "tournament_db.json"
+from src.paths import DB_PATH
 
 def save_game(tournament_id, game, db_path=DB_PATH):
     with TinyDB(db_path) as db:
