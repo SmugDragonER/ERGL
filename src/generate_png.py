@@ -23,17 +23,8 @@ with open(LAYOUT_PATH, encoding="utf-8") as f:
 
 TEMPLATE = ASSET_DIR / layout["template"]
 
-FONT_PATH_NAME = FONT_DIR / "Montserrat-Medium.ttf"
-FONT_PATH_REST = FONT_DIR / "Montserrat-Bold.ttf"
-
 FIRST_ROW_Y = layout["first_row_y"]
 ROW_SPACEING = layout["row_spacing"]
-RANK_X = layout["columns"]["rank"]["x"]
-NAME_X = layout["columns"]["name"]["x"]
-PHASE_1_TK_X = layout["columns"]["p1_tk"]["x"]
-PHASE_2_TK_X = layout["columns"]["p2_tk"]["x"]
-TOTAL_PTS_X = layout["columns"]["points"]["x"]
-
 
 # Team names shrink when they are too wide for the name column
 NAME_FONT_SIZE = layout["columns"]["name"]["size"]
@@ -45,18 +36,19 @@ NAME_MAX_WIDTH = layout["columns"]["name"]["max_width"]
 def get_y(i):
     return FIRST_ROW_Y + i * ROW_SPACEING
 
-def fit_font(draw, text, max_width):
+def fit_font(draw, text, namecolumn):
     """AI-GENERATED: Return the biggest name font (down to NAME_MIN_SIZE) in which text fits into max_width."""
-    size = NAME_FONT_SIZE
-    font = ImageFont.truetype(FONT_PATH_NAME, size)
-    while draw.textlength(text, font=font) > max_width and size > NAME_MIN_SIZE:
+    size = namecolumn["size"]
+
+    font = ImageFont.truetype(FONT_DIR / namecolumn["font"], namecolumn["size"])
+    while draw.textlength(text, font=font) > namecolumn["max_width"] and size > namecolumn["min_size"]:
         size -= 1
-        font = ImageFont.truetype(FONT_PATH_NAME, size)
+        font = ImageFont.truetype(FONT_DIR / namecolumn["font"], size)
     return font
 
 def draw_row(draw, i, standing):
     name = str(standing.team.team_name)
-    font_name = fit_font(draw, name, NAME_MAX_WIDTH)
+    font_name = fit_font(draw, name, layout["columns"]["name"])
 
     values = {
             "rank":   f"#{standing.rank}",

@@ -2,7 +2,6 @@
   "template": "Leaderboard.png",
   "first_row_y": 334,
   "row_spacing": 84,
-  "max_rows": 8,
   "columns": {
     "rank":   {"x": 56,  "font": "Montserrat-Bold.ttf",   "size": 35, "color": "#fd6160", "anchor": "lm"},
     "name":   {"x": 155, "font": "Montserrat-Medium.ttf", "size": 30, "min_size": 20, "max_width": 355, "color": "#ffffff", "anchor": "lm"},
