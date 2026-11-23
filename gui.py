@@ -11,12 +11,18 @@ Start from the project root:
     python gui.py
 """
 import os
+import subprocess
+import time
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
-from main import create_png, import_csv, load_games, set_headbooms, show_bans, show_standings
+from PIL import ImageTk
+
+from main import (create_png, import_csv, load_games, preview_png, set_headbooms, show_bans,
+                  show_standings)
 from src.models import HEADBOOM_PENALTY
+from src.paths import LAYOUT_PATH
 
 # --------------------------------------------------------------------------
 # Farben (passend zum Leaderboard.png: dunkel, Gold, Rot)
@@ -32,6 +38,7 @@ GOLD = "#ffd084"
 RED = "#fd6160"
 
 DEFAULT_TOURNAMENT = "EU_DOJO_NR_1"
+PREVIEW_SIZE = (960, 540)      # Vorschau = halbe Größe von 1920x1080
 
 
 # --------------------------------------------------------------------------
@@ -153,6 +160,102 @@ def on_create_png():
         os.startfile(output_path.get())     # öffnet das Bild (nur Windows)
 
 
+# --------------------------------------------------------------------------
+# Vorschau-Fenster
+# --------------------------------------------------------------------------
+preview = {"window": None, "label": None, "info": None, "mtime": None}
+
+
+def preview_is_open():
+    return preview["window"] is not None and preview["window"].winfo_exists()
+
+
+def layout_mtime():
+    """Zeitpunkt der letzten Änderung von layout.json (oder None, wenn sie fehlt)."""
+    try:
+        return LAYOUT_PATH.stat().st_mtime
+    except OSError:
+        return None
+
+
+def render_preview():
+    """Bild neu zeichnen (ohne zu speichern) und im Vorschau-Fenster anzeigen."""
+    if not preview_is_open():
+        return
+    name = get_tournament(warn=False)
+    if name is None:
+        preview["info"].config(text="Enter a tournament name first.", foreground=RED)
+        return
+    try:
+        img = preview_png(name)
+    except Exception as e:      # z.B. Tippfehler in layout.json -> anzeigen statt abstürzen
+        preview["info"].config(text=f"Error: {e}", foreground=RED)
+        return
+
+    img.thumbnail(PREVIEW_SIZE)                 # verkleinern, Seitenverhältnis bleibt
+    photo = ImageTk.PhotoImage(img, master=preview["window"])
+    preview["label"].config(image=photo)
+    preview["label"].image = photo              # Referenz behalten, sonst bleibt das Bild leer!
+    preview["info"].config(text=f"Updated {time.strftime('%H:%M:%S')}", foreground=MUTED)
+
+
+def watch_layout():
+    """Jede Sekunde prüfen, ob layout.json gespeichert wurde -> dann neu zeichnen."""
+    if not preview_is_open():
+        return
+    mtime = layout_mtime()
+    if mtime != preview["mtime"]:
+        preview["mtime"] = mtime
+        render_preview()
+    root.after(1000, watch_layout)
+
+
+def close_preview():
+    preview["window"].destroy()
+    preview["window"] = None
+
+
+def on_preview():
+    if preview_is_open():                       # schon offen? Nach vorne holen + neu zeichnen
+        preview["window"].lift()
+        render_preview()
+        return
+
+    win = tk.Toplevel(root)
+    win.title("Leaderboard Preview")
+    win.transient(root)         # bleibt immer über dem Hauptfenster
+    win.configure(bg=BG)
+    win.resizable(False, False)
+    win.protocol("WM_DELETE_WINDOW", close_preview)
+
+    bar = ttk.Frame(win, padding=(16, 12, 16, 8))
+    bar.pack(fill="x")
+    ttk.Button(bar, text="Refresh", command=render_preview).pack(side="left")
+    ttk.Button(bar, text="Edit layout…", command=on_edit_layout).pack(side="left", padx=8)
+    info = ttk.Label(bar, text="", style="Status.TLabel")
+    info.pack(side="right")
+
+    ttk.Label(win, text="Updates automatically when you save layout.json.",
+              style="Status.TLabel", padding=(16, 0, 16, 8)).pack(anchor="w")
+
+    label = tk.Label(win, bg=BG, bd=0)
+    label.pack(padx=16, pady=(0, 16))
+
+    preview.update(window=win, label=label, info=info, mtime=layout_mtime())
+    render_preview()
+    win.lift()                  # Vorschau vor das Hauptfenster holen
+    win.focus_force()
+    root.after(1000, watch_layout)
+
+
+def on_edit_layout():
+    """layout.json im Standard-Editor öffnen (Fallback: Notepad)."""
+    try:
+        os.startfile(LAYOUT_PATH)
+    except OSError:
+        subprocess.Popen(["notepad", str(LAYOUT_PATH)])
+
+
 def on_edit_headbooms(event=None):
     """Doppelklick / Button: Headbooms für das gewählte Team im gewählten Game setzen."""
     selected = headboom_table.selection()
@@ -192,6 +295,7 @@ def refresh_all(event=None):
     refresh_standings()
     refresh_games()
     refresh_bans()
+    render_preview()        # macht nichts, wenn die Vorschau nicht offen ist
 
 
 def refresh_standings():
@@ -388,6 +492,8 @@ ttk.Button(actions, text="Import CSVs", style="Accent.TButton", command=on_impor
 ttk.Button(actions, text="Create PNG", style="Gold.TButton", command=on_create_png).pack(side="left", padx=10)
 ttk.Checkbutton(actions, text="Open image afterwards", variable=open_after,
                 style="Card.TCheckbutton").pack(side="left", padx=10)
+ttk.Button(actions, text="Edit layout…", command=on_edit_layout).pack(side="right")
+ttk.Button(actions, text="Preview", command=on_preview).pack(side="right", padx=10)
 
 # --------------------------------------------------------------------------
 # Statuszeile (vor den Tabs packen, damit sie immer sichtbar bleibt)
