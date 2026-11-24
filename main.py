@@ -1,4 +1,5 @@
 import src.services, src.db_service, src.generate_png
+from src.paths import MAIN_LAYOUT_PATH, MINI_LAYOUT_PATH
 
 
 def import_csv(csv_path, tournament_id):
@@ -16,7 +17,11 @@ def show_standings(tournament_id):
 
 def create_png(tournament_id, output_path):
     standings = show_standings(tournament_id)
-    src.generate_png.create_png(standings, output_path)
+    src.generate_png.create_png(standings, output_path, MAIN_LAYOUT_PATH)
+
+def create_mini_png(tournament_id, output_path):
+    standings = show_standings(tournament_id)
+    src.generate_png.create_png(standings, output_path, MINI_LAYOUT_PATH)
 
 
 def load_games(tournament_id):
@@ -33,9 +38,9 @@ def show_bans(tournament_id):
 def set_headbooms(tournament_id, game_id, team_name, headbooms):
     src.db_service.set_headbooms(tournament_id, game_id, team_name, headbooms)
 
-def preview_png(tournament_id):
+def preview_png(tournament_id, layout_path=MAIN_LAYOUT_PATH):
     standings = show_standings(tournament_id)
-    return src.generate_png.render_png(standings)
+    return src.generate_png.render_png(standings, layout_path)
 
 if __name__ == "__main__":
     import_csv("assets/Game 1.csv", "EU_DOJO_NR_1")

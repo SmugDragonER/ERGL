@@ -22,5 +22,6 @@ else:
 
 ASSET_DIR = BASE_DIR / "assets"
 FONT_DIR = ASSET_DIR / "fonts" / "Montserrat" / "static"
-LAYOUT_PATH = ASSET_DIR / "layout.json"
+MAIN_LAYOUT_PATH = ASSET_DIR / "layout_main.json"
+MINI_LAYOUT_PATH = ASSET_DIR / "layout_mini.json"
 DB_PATH = BASE_DIR / "tournament_db.json"

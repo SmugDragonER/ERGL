@@ -1,0 +1,11 @@
+{
+  "template": "EUdojomini.png",
+  "first_row_y": 68.5,
+  "row_spacing": 22,
+  "columns": {
+    "rank":   {"x": 16,  "font": "Montserrat-Bold.ttf",   "size": 18, "color": "#fd6160", "anchor": "mm"},
+    "name":   {"x": 31, "font": "Montserrat-SemiBold.ttf", "size": 11, "min_size": 8, "max_width": 115, "color": "#ffffff", "anchor": "lm"},
+    "points": {"x": 189, "font": "Montserrat-Bold.ttf",   "size": 11, "color": "#ffd084", "anchor": "lm"}
+  },
+  "checkpoint_color": "#fd6160"
+}

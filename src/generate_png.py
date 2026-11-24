@@ -1,7 +1,7 @@
 import json
 from PIL import Image, ImageDraw, ImageFont
 
-from src.paths import ASSET_DIR, FONT_DIR, LAYOUT_PATH
+from src.paths import ASSET_DIR, FONT_DIR, MAIN_LAYOUT_PATH, MINI_LAYOUT_PATH
 
 # TEMPLATE = BASE_DIR / "assets" / "Leaderboard.png"
 # FONT_PATH_NAME = BASE_DIR/"assets"/"fonts"/"Montserrat"/"static"/"Montserrat-Medium.ttf"
@@ -26,8 +26,8 @@ from src.paths import ASSET_DIR, FONT_DIR, LAYOUT_PATH
 # NAME_MIN_SIZE = layout["columns"]["name"]["min_size"]
 # NAME_MAX_WIDTH = layout["columns"]["name"]["max_width"]
 
-def load_layout():
-    with open(LAYOUT_PATH, encoding="utf-8") as f:
+def load_layout(path):
+    with open(path, encoding="utf-8") as f:
         layout = json.load(f)
         return layout
     
@@ -67,13 +67,13 @@ def draw_row(draw, i, standing, layout):
         
         draw.text((col["x"],get_y(i, layout)), values[col_name], font=font, fill=color, anchor=col["anchor"])
 
-def create_png(standings, output_path):
+def create_png(standings, output_path, layout_path):
     
-    img = render_png(standings)
+    img = render_png(standings,layout_path)
     img.save(output_path)
 
-def render_png(standings):
-    layout = load_layout()
+def render_png(standings, layout_path):
+    layout = load_layout(layout_path)
     img = Image.open(ASSET_DIR /layout["template"])
     draw = ImageDraw.Draw(img)
     for i, team in enumerate(standings):
