@@ -17,12 +17,18 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
-from PIL import ImageTk
+from PIL import Image, ImageTk
 
-from main import (create_png, import_csv, load_games, preview_png, set_headbooms, show_bans,
-                  show_standings)
+from main import (create_mini_png, create_png, import_csv, load_games, preview_png, set_headbooms,
+                  show_bans, show_standings)
 from src.models import HEADBOOM_PENALTY
-from src.paths import LAYOUT_PATH
+from src.paths import MAIN_LAYOUT_PATH, MINI_LAYOUT_PATH
+
+# Welche Layouts es gibt (Name in der Vorschau -> Datei)
+LAYOUTS = {
+    "Main leaderboard": MAIN_LAYOUT_PATH,
+    "Mini leaderboard": MINI_LAYOUT_PATH,
+}
 
 # --------------------------------------------------------------------------
 # Farben (passend zum Leaderboard.png: dunkel, Gold, Rot)
@@ -106,6 +112,23 @@ def on_choose_output():
         output_path.set(path)
 
 
+def on_choose_mini_output():
+    path = filedialog.asksaveasfilename(
+        title="Save mini PNG as",
+        defaultextension=".png",
+        filetypes=[("PNG image", "*.png")],
+        initialfile=f"{tournament.get().strip() or 'leaderboard'}_mini.png",
+    )
+    if path:
+        mini_output_path.set(path)
+
+
+def default_mini_path(main_path):
+    """leaderboard.png -> leaderboard_mini.png (im selben Ordner)."""
+    p = Path(main_path)
+    return str(p.with_name(f"{p.stem}_mini{p.suffix}"))
+
+
 def on_import():
     name = get_tournament()
     if name is None:
@@ -149,13 +172,17 @@ def on_create_png():
         if not output_path.get():
             return
 
+    if not mini_output_path.get():  # kein eigenes Mini-Ziel? -> neben das große Bild
+        mini_output_path.set(default_mini_path(output_path.get()))
+
     try:
         create_png(name, output_path.get())
+        create_mini_png(name, mini_output_path.get())
     except Exception as e:
         messagebox.showerror("Could not create PNG", str(e))
         return
 
-    set_status(f"PNG saved: {output_path.get()} ✓", GOLD)
+    set_status(f"Saved: {Path(output_path.get()).name} + {Path(mini_output_path.get()).name} ✓", GOLD)
     if open_after.get():
         os.startfile(output_path.get())     # öffnet das Bild (nur Windows)
 
@@ -163,19 +190,37 @@ def on_create_png():
 # --------------------------------------------------------------------------
 # Vorschau-Fenster
 # --------------------------------------------------------------------------
-preview = {"window": None, "label": None, "info": None, "mtime": None}
+preview = {"window": None, "label": None, "info": None, "hint": None, "mtime": None}
 
 
 def preview_is_open():
     return preview["window"] is not None and preview["window"].winfo_exists()
 
 
+def selected_layout():
+    """Pfad des Layouts, das in der Vorschau gewählt ist."""
+    return LAYOUTS[preview_board.get()]
+
+
 def layout_mtime():
-    """Zeitpunkt der letzten Änderung von layout.json (oder None, wenn sie fehlt)."""
+    """Zeitpunkt der letzten Änderung des gewählten Layouts (oder None, wenn es fehlt)."""
     try:
-        return LAYOUT_PATH.stat().st_mtime
+        return selected_layout().stat().st_mtime
     except OSError:
         return None
+
+
+def fit_preview(img):
+    """Bild so skalieren, dass es in PREVIEW_SIZE passt.
+    Große Bilder werden glatt verkleinert, kleine (Mini-Board) pixelgenau vergrößert."""
+    scale = min(PREVIEW_SIZE[0] / img.width, PREVIEW_SIZE[1] / img.height)
+    if scale >= 1:
+        scale = int(scale)              # ganze Zahl -> jeder Pixel wird ein sauberes Quadrat
+        resample = Image.NEAREST
+    else:
+        resample = Image.LANCZOS
+    size = (max(1, round(img.width * scale)), max(1, round(img.height * scale)))
+    return img.resize(size, resample), scale
 
 
 def render_preview():
@@ -187,16 +232,27 @@ def render_preview():
         preview["info"].config(text="Enter a tournament name first.", foreground=RED)
         return
     try:
-        img = preview_png(name)
-    except Exception as e:      # z.B. Tippfehler in layout.json -> anzeigen statt abstürzen
+        img = preview_png(name, selected_layout())
+    except Exception as e:      # z.B. Tippfehler in der Layout-Datei -> anzeigen statt abstürzen
         preview["info"].config(text=f"Error: {e}", foreground=RED)
         return
 
-    img.thumbnail(PREVIEW_SIZE)                 # verkleinern, Seitenverhältnis bleibt
+    original_size = img.size
+    img, scale = fit_preview(img)
     photo = ImageTk.PhotoImage(img, master=preview["window"])
     preview["label"].config(image=photo)
     preview["label"].image = photo              # Referenz behalten, sonst bleibt das Bild leer!
-    preview["info"].config(text=f"Updated {time.strftime('%H:%M:%S')}", foreground=MUTED)
+    preview["info"].config(
+        text=f"{original_size[0]}×{original_size[1]} px, shown at {scale:g}×  ·  "
+             f"updated {time.strftime('%H:%M:%S')}",
+        foreground=MUTED)
+
+
+def on_switch_board(event=None):
+    """Anderes Layout in der Vorschau gewählt -> dieses beobachten und neu zeichnen."""
+    preview["mtime"] = layout_mtime()
+    preview["hint"].config(text=f"Updates automatically when you save {selected_layout().name}.")
+    render_preview()
 
 
 def watch_layout():
@@ -230,18 +286,23 @@ def on_preview():
 
     bar = ttk.Frame(win, padding=(16, 12, 16, 8))
     bar.pack(fill="x")
-    ttk.Button(bar, text="Refresh", command=render_preview).pack(side="left")
+    board_combo = ttk.Combobox(bar, textvariable=preview_board, values=list(LAYOUTS),
+                               state="readonly", width=18)
+    board_combo.pack(side="left")
+    board_combo.bind("<<ComboboxSelected>>", on_switch_board)
+    ttk.Button(bar, text="Refresh", command=render_preview).pack(side="left", padx=(8, 0))
     ttk.Button(bar, text="Edit layout…", command=on_edit_layout).pack(side="left", padx=8)
-    info = ttk.Label(bar, text="", style="Status.TLabel")
-    info.pack(side="right")
 
-    ttk.Label(win, text="Updates automatically when you save layout.json.",
-              style="Status.TLabel", padding=(16, 0, 16, 8)).pack(anchor="w")
+    hint = ttk.Label(win, text=f"Updates automatically when you save {selected_layout().name}.",
+                     style="Status.TLabel", padding=(16, 0, 16, 2))
+    hint.pack(anchor="w")
+    info = ttk.Label(win, text="", style="Status.TLabel", padding=(16, 0, 16, 8))
+    info.pack(anchor="w")
 
     label = tk.Label(win, bg=BG, bd=0)
     label.pack(padx=16, pady=(0, 16))
 
-    preview.update(window=win, label=label, info=info, mtime=layout_mtime())
+    preview.update(window=win, label=label, info=info, hint=hint, mtime=layout_mtime())
     render_preview()
     win.lift()                  # Vorschau vor das Hauptfenster holen
     win.focus_force()
@@ -249,11 +310,12 @@ def on_preview():
 
 
 def on_edit_layout():
-    """layout.json im Standard-Editor öffnen (Fallback: Notepad)."""
+    """Das in der Vorschau gewählte Layout im Standard-Editor öffnen (Fallback: Notepad)."""
+    path = selected_layout()
     try:
-        os.startfile(LAYOUT_PATH)
+        os.startfile(path)
     except OSError:
-        subprocess.Popen(["notepad", str(LAYOUT_PATH)])
+        subprocess.Popen(["notepad", str(path)])
 
 
 def on_edit_headbooms(event=None):
@@ -379,6 +441,8 @@ csv_folder = tk.StringVar()
 output_path = tk.StringVar()
 open_after = tk.BooleanVar(value=True)
 game_choice = tk.StringVar()
+mini_output_path = tk.StringVar()
+preview_board = tk.StringVar(value="Main leaderboard")   # welches Layout die Vorschau zeigt
 
 # --------------------------------------------------------------------------
 # Styles (Aussehen aller ttk-Widgets an einer Stelle)
@@ -481,6 +545,11 @@ ttk.Button(settings, text="Choose folder…", command=on_choose_folder).grid(row
 ttk.Label(settings, text="PNG output", style="Card.TLabel").grid(row=3, column=0, sticky="w", padx=(0, 12))
 ttk.Label(settings, textvariable=output_path, style="Muted.TLabel").grid(row=3, column=1, sticky="w")
 ttk.Button(settings, text="Choose file…", command=on_choose_output).grid(row=3, column=2, sticky="e", pady=4)
+
+# Mini-Output (leer = automatisch "<name>_mini.png" neben dem großen Bild)
+ttk.Label(settings, text="Mini PNG output", style="Card.TLabel").grid(row=4, column=0, sticky="w", padx=(0, 12))
+ttk.Label(settings, textvariable=mini_output_path, style="Muted.TLabel").grid(row=4, column=1, sticky="w")
+ttk.Button(settings, text="Choose file…", command=on_choose_mini_output).grid(row=4, column=2, sticky="e", pady=4)
 
 # --------------------------------------------------------------------------
 # Aktions-Buttons
