@@ -1,2 +1,2 @@
-Pillow
-tinydb
+Pillow==13.0.0
+tinydb==4.9.0
