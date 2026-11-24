@@ -1,11 +1,11 @@
 {
   "template": "EUdojomini.png",
-  "first_row_y": 68.5,
+  "first_row_y": 69,
   "row_spacing": 22,
   "columns": {
-    "rank":   {"x": 16,  "font": "Montserrat-Bold.ttf",   "size": 18, "color": "#fd6160", "anchor": "mm"},
-    "name":   {"x": 31, "font": "Montserrat-SemiBold.ttf", "size": 11, "min_size": 8, "max_width": 115, "color": "#ffffff", "anchor": "lm"},
-    "points": {"x": 189, "font": "Montserrat-Bold.ttf",   "size": 11, "color": "#ffd084", "anchor": "lm"}
+    "rank":   {"x": 15,  "font": "Montserrat-Bold.ttf",   "size": 16, "color": "#fd6160", "anchor": "mm"},
+    "name":   {"x": 31, "font": "Montserrat-SemiBold.ttf", "size": 11, "min_size": 9, "max_width": 130, "color": "#ffffff", "anchor": "lm"},
+    "points": {"x": 190, "font": "Montserrat-Bold.ttf",   "size": 11, "color": "#ffd084", "anchor": "rm"}
   },
   "checkpoint_color": "#fd6160"
 }

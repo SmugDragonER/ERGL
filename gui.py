@@ -516,7 +516,7 @@ style.map("TNotebook.Tab", background=[("selected", CARD), ("active", CARD)],
 header = ttk.Frame(root, padding=(20, 16, 20, 8))
 header.pack(fill="x")
 ttk.Label(header, text="EU DOJO Leaderboard", style="Title.TLabel").pack(anchor="w")
-ttk.Label(header, text="Import CSVs  →  check headbooms & bans  →  create PNG",
+ttk.Label(header, text="A Tool created by SmugDragon to assist with Tournaments",
           style="Subtitle.TLabel").pack(anchor="w")
 
 # --------------------------------------------------------------------------

@@ -47,13 +47,13 @@ def fit_font(draw, text, namecolumn):
 def draw_row(draw, i, standing, layout):
     name = str(standing.team.team_name)
     font_name = fit_font(draw, name, layout["columns"]["name"])
-
+ 
     values = {
-            "rank":   f"#{standing.rank}",
+            "rank":   f"{standing.rank}",
             "name":   name,
             "p1_tk":  str(standing.p1_tk),
             "p2_tk":  str(standing.p2_tk),
-            "points": f"{standing.points:g}",
+            "points": f"{standing.points:.1f}",
     }
 
     for col_name, col in layout["columns"].items():
@@ -64,8 +64,9 @@ def draw_row(draw, i, standing, layout):
                 color = layout["checkpoint_color"]
         else:
             font = ImageFont.truetype(FONT_DIR / col["font"], col["size"])
-        
-        draw.text((col["x"],get_y(i, layout)), values[col_name], font=font, fill=color, anchor=col["anchor"])
+
+        text = col.get("prefix", "") + values[col_name]
+        draw.text((col["x"],get_y(i, layout)), text, font=font, fill=color, anchor=col["anchor"])
 
 def create_png(standings, output_path, layout_path):
     
