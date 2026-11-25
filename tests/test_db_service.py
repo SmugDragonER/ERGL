@@ -234,8 +234,9 @@ class TestSetHeadbooms(DbTestCase):
         with self.assertRaises(ValueError):
             set_headbooms(TOURNAMENT, 999, "Alpha", 1, db_path=self.db_path)
 
-    def test_unknown_team_changes_nothing(self):
-        set_headbooms(TOURNAMENT, 1, "Nobody", 3, db_path=self.db_path)
+    def test_unknown_team_raises_and_changes_nothing(self):
+        with self.assertRaises(ValueError):
+            set_headbooms(TOURNAMENT, 1, "Nobody", 3, db_path=self.db_path)
         self.assertEqual(self.entry("Alpha").headbooms, 0)
         self.assertEqual(self.entry("Beta").headbooms, 0)
 

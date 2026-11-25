@@ -1,30 +1,8 @@
 import json
 from PIL import Image, ImageDraw, ImageFont
 
-from src.paths import ASSET_DIR, FONT_DIR, MAIN_LAYOUT_PATH, MINI_LAYOUT_PATH
+from src.paths import ASSET_DIR, FONT_DIR
 
-# TEMPLATE = BASE_DIR / "assets" / "Leaderboard.png"
-# FONT_PATH_NAME = BASE_DIR/"assets"/"fonts"/"Montserrat"/"static"/"Montserrat-Medium.ttf"
-# FONT_PATH_REST = BASE_DIR/"assets"/"fonts"/"Montserrat"/"static"/"Montserrat-Bold.ttf"
-# FONT_SIZE = 35
-# FIRST_ROW_Y = 334
-# ROW_SPACEING = 84
-# RANK_X = 56
-# NAME_X = 155
-# PHASE_1_TK_X = 570
-# PHASE_2_TK_X = 770
-# TOTAL_PTS_X = 940
-# COLOR_WHITE = (255,255,255)
-# COLOR_RED = "#fd6160"
-# COLOR_GOLD = "#ffd084"
-
-
-
-
-# Team names shrink when they are too wide for the name column
-# NAME_FONT_SIZE = layout["columns"]["name"]["size"]
-# NAME_MIN_SIZE = layout["columns"]["name"]["min_size"]
-# NAME_MAX_WIDTH = layout["columns"]["name"]["max_width"]
 
 def load_layout(path):
     with open(path, encoding="utf-8") as f:
@@ -35,7 +13,8 @@ def get_y(i, layout):
     return layout["first_row_y"] + i * layout["row_spacing"]
 
 def fit_font(draw, text, namecolumn):
-    """AI-GENERATED: Return the biggest name font (down to NAME_MIN_SIZE) in which text fits into max_width."""
+    """AI-GENERATED: Return the biggest font (from namecolumn["size"] down to namecolumn["min_size"])
+    in which text fits into namecolumn["max_width"]."""
     size = namecolumn["size"]
 
     font = ImageFont.truetype(FONT_DIR / namecolumn["font"], namecolumn["size"])

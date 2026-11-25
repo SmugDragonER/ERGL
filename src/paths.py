@@ -8,8 +8,10 @@ Expected layout in both cases:
     BASE_DIR/
     ├── tournament_db.json      (created automatically)
     └── assets/
-        ├── Leaderboard.png
-        ├── layout.json
+        ├── Leaderboard.png         (main template)
+        ├── EUdojomini.png          (mini template)
+        ├── layout_main.json
+        ├── layout_mini.json
         └── fonts/Montserrat/static/...
 """
 import sys

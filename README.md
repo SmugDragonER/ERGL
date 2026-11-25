@@ -75,22 +75,31 @@ python -m unittest discover -s tests -v
 
 ```bash
 pip install pyinstaller
-pyinstaller --onefile --windowed --name EU_DOJO --add-data "assets;assets" gui.py
+pyinstaller --onefile --windowed --name EU_DOJO gui.py
 ```
 
-The result is `dist/EU_DOJO.exe`. Do not commit `build/` or `dist/`. Upload the zipped `.exe` as a GitHub Release instead.
+The result is `dist/EU_DOJO.exe`. The `assets/` folder is **not** packed into the .exe. It must sit next to it:
+
+```
+EU_DOJO/
+├── EU_DOJO.exe
+└── assets/
+```
+
+Copy `assets/` into `dist/`, zip both together and upload the zip as a GitHub Release. Do not commit `build/` or `dist/`.
 
 ### Project structure
 
 ```
 gui.py              Window (tkinter), only calls the functions in main.py
-main.py             Entry points: import_csv, show_standings, create_png, show_bans, set_headbooms
+main.py             Entry points: import_csv, show_standings, create_png, create_mini_png, preview_png, show_bans, set_headbooms
 src/
+  paths.py          All file and folder locations (works from source and as .exe)
   models.py         Team, GameEntryPerTeam, Game, TeamStanding, Leaderboard (standings, checkpoints, bans)
   services.py       Reads a CSV and builds a Game from it
   db_service.py     Saves and loads games with TinyDB (tournament_db.json)
-  generate_png.py   Draws the standings onto assets/Leaderboard.png
-assets/             Leaderboard template, fonts, sample CSV
+  generate_png.py   Draws the standings onto a template, driven by a layout JSON
+assets/             Templates, layout_main.json / layout_mini.json (positions, fonts, colors), fonts
 tests/              Unit tests
 CSV_Bible.md        Which CSV column means what
 ```

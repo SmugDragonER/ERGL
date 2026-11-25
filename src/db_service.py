@@ -35,8 +35,13 @@ def set_headbooms(tournament_id, game_id, team_name, headbooms, db_path=DB_PATH)
         
         game_obj = Game.from_dict(game_doc)
 
+        found = False
         for entry in game_obj.entries:
             if entry.team.team_name == team_name:
                 entry.headbooms = headbooms
+                found = True
+
+        if not found:
+            raise ValueError(f"Could not find team {team_name} in game {game_id}!")  # AI-ADDED: typo in a team name no longer gets lost silently
 
     save_game(tournament_id, game_obj, db_path)
