@@ -8,6 +8,10 @@ Turns the CSV files that the game exports after each match into a finished leade
 - Checkpoint teams highlighted in red
 - Character bans for the next game
 - Exports the standings onto the leaderboard template as a PNG
+- Small in-game leaderboard (mini PNG) for streaming, e.g. as an OBS image source
+- Layouts (positions, fonts, sizes, colors) are customizable via JSON, with a live preview
+
+A free community tool for small Eternal Return tournaments. Contributions are welcome!
 
 ---
 
@@ -117,6 +121,27 @@ Totals, checkpoints and bans are never stored. They are calculated from the save
 The core logic (`models.py`, `services.py`, `db_service.py`, `generate_png.py`, `main.py`) was written by hand.
 The GUI (`gui.py`), all tests in `tests/` and a few helper functions were generated with AI (Claude). They are marked as AI-generated in the files.
 
-### Font
+### Contributing
 
-[Montserrat](assets/fonts/Montserrat/OFL.txt), licensed under the SIL Open Font License.
+Ideas, bug reports and pull requests are welcome.
+
+- **Found a bug or have an idea?** Open an [issue](https://github.com/SmugDragonER/ERGL/issues). For bugs, include what you did, what you expected, and the error message if there is one.
+- **Want to change code?**
+  1. Fork the repo and create a branch, e.g. `fix-mini-layout`.
+  2. Make your change. Keep the logic in `src/` and only UI code in `gui.py`.
+  3. Run the tests (`python -m unittest discover -s tests -v`) and add a test for new logic.
+  4. Open a pull request and describe what it changes and why.
+- Never commit real tournament data you are not allowed to share. `tournament_db.json` is your local working file.
+
+---
+
+## License
+
+The code is licensed under the [MIT License](LICENSE). You can use, change and share it freely.
+
+The [Montserrat](assets/fonts/Montserrat/OFL.txt) font is licensed under the SIL Open Font License.
+
+## Disclaimer
+
+ERGL is a fan-made community tool and is not affiliated with or endorsed by Nimble Neuron.
+Eternal Return and all related names and assets are property of their respective owners.

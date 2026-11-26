@@ -75,13 +75,17 @@ ehthumbs.db
 # Logs
 *.log
 
-# Generated images / outputs
+# Generated images / outputs (but keep the templates in assets/)
 *.png
+!assets/*.png
 
-
-build/
-dist/
+# PyInstaller
 EU_DOJO.spec
-.assets/Game 1.csv
-.assets/template.png
+
+# Game exports (only the sample ExampleGame.csv is tracked)
 assets/*.csv
+!assets/ExampleGame.csv
+
+# TinyDB
+tournament_db.json
+./tournament_db.json

@@ -43,7 +43,7 @@ def preview_png(tournament_id, layout_path=MAIN_LAYOUT_PATH):
     return src.generate_png.render_png(standings, layout_path)
 
 if __name__ == "__main__":
-    import_csv("assets/Game 1.csv", "EU_DOJO_NR_1")
+    import_csv("assets/ExampleGame.csv", "EU_DOJO_NR_1")
     for s in show_standings("EU_DOJO_NR_1"):
         print(s.rank, s.team.team_name, s.points)
 

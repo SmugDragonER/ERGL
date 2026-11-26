@@ -19,7 +19,7 @@ from src.models import Game, GameEntryPerTeam, Team
 from src.services import build_entry, build_game_from_csv, extract_game_id, load_csv_data
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
-GAME_CSV = PROJECT_DIR / "assets" / "Game 1.csv"
+GAME_CSV = PROJECT_DIR / "assets" / "ExampleGame.csv"
 
 
 def make_row(team, nickname, character, *, rank="1", total="10", dcne="0", elim="0", dce="0", game_id="123"):
