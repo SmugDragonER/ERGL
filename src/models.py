@@ -10,7 +10,7 @@ Data models for the tournament system.
 
 
 # CONSTANTS
-HEADBOOM_PENALTY = 5
+HEADBOOM_PENALTY = 1
 CHECKPOINT_TEAMS = {5: 2, 6: 3, 7: 5, 8: 7, 9: 8}
 
 @dataclass
