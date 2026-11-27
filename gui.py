@@ -19,7 +19,7 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from PIL import Image, ImageTk
 
-from main import (create_mini_png, create_png, delete_tournament, import_csv, list_tournaments, load_games,
+from main import (create_mini_png, create_png, delete_game, delete_tournament, import_csv, list_tournaments, load_games,
                   preview_png, set_headbooms, show_bans, show_standings)
 from src.models import HEADBOOM_PENALTY
 from src.paths import MAIN_LAYOUT_PATH, MINI_LAYOUT_PATH
@@ -344,6 +344,35 @@ def on_edit_layout():
         subprocess.Popen(["notepad", str(path)])
 
 
+def on_delete_game():
+    """Delete the game selected in the Headbooms tab from the current tournament."""
+    label = game_choice.get()
+    game = games_by_label.get(label)
+    if game is None:
+        messagebox.showinfo("Nothing selected", "Please select a game first.")
+        return
+    name = get_tournament()
+    if name is None:
+        return
+    if not messagebox.askyesno(
+            "Delete game",
+            f"Delete {label} from {name}?\n\n"
+            "Its headbooms are lost too. If its CSV is still in the CSV folder, "
+            "the next import will add it again.",
+            icon="warning"):
+        return
+
+    try:
+        delete_game(name, game.game_id)
+    except Exception as e:
+        messagebox.showerror("Could not delete", str(e))
+        return
+
+    game_choice.set("")         # the deleted game no longer exists -> refresh picks the newest
+    refresh_all()
+    set_status(f"Game {game.game_id} deleted ✓", GOLD)
+
+
 def on_edit_headbooms(event=None):
     """Double-click / button: set headbooms for the selected team in the selected game."""
     selected = headboom_table.selection()
@@ -639,6 +668,7 @@ game_combo = ttk.Combobox(game_row, textvariable=game_choice, state="readonly", 
 game_combo.pack(side="left")
 game_combo.bind("<<ComboboxSelected>>", refresh_headboom_table)
 ttk.Button(game_row, text="Set headbooms…", command=on_edit_headbooms).pack(side="right")
+ttk.Button(game_row, text="Delete game…", command=on_delete_game).pack(side="right", padx=(0, 8))
 
 ttk.Label(headboom_tab, text=f"Double-click a team to enter headbooms "
                              f"(-{HEADBOOM_PENALTY:g} points each, in this game only).",

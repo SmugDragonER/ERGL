@@ -26,7 +26,7 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-from src.db_service import (delete_tournament, is_game_saved, list_tournaments, load_leaderboard, save_game,
+from src.db_service import (delete_game, delete_tournament, is_game_saved, list_tournaments, load_leaderboard, save_game,
                             set_headbooms)
 from src.models import HEADBOOM_PENALTY, Game, GameEntryPerTeam, Leaderboard, Team
 
@@ -288,6 +288,46 @@ class TestDeleteTournament(DbTestCase):
         with self.assertRaises(ValueError):
             delete_tournament("DOES_NOT_EXIST", db_path=self.db_path)
         self.assertEqual(list_tournaments(db_path=self.db_path), ["ALPHA_CUP"])
+
+
+
+# AI-GENERATED (Claude): tests for delete_game
+class TestDeleteGame(DbTestCase):
+    def game_ids(self, tournament=TOURNAMENT):
+        return sorted(g.game_id for g in load_leaderboard(tournament, db_path=self.db_path).games)
+
+    def test_deleted_game_is_gone(self):
+        save_game(TOURNAMENT, make_game(1), db_path=self.db_path)
+        delete_game(TOURNAMENT, 1, db_path=self.db_path)
+        self.assertFalse(is_game_saved(TOURNAMENT, 1, db_path=self.db_path))
+
+    def test_other_games_are_kept(self):
+        for game_id in (1, 2, 3):
+            save_game(TOURNAMENT, make_game(game_id), db_path=self.db_path)
+        delete_game(TOURNAMENT, 2, db_path=self.db_path)
+        self.assertEqual(self.game_ids(), [1, 3])
+
+    def test_same_game_id_in_other_tournament_is_kept(self):
+        save_game(TOURNAMENT, make_game(1), db_path=self.db_path)
+        save_game("OTHER_CUP", make_game(1), db_path=self.db_path)
+        delete_game(TOURNAMENT, 1, db_path=self.db_path)
+        self.assertEqual(self.game_ids("OTHER_CUP"), [1])
+
+    def test_unknown_game_raises_value_error(self):
+        save_game(TOURNAMENT, make_game(1), db_path=self.db_path)
+        with self.assertRaises(ValueError):
+            delete_game(TOURNAMENT, 999, db_path=self.db_path)
+        self.assertEqual(self.game_ids(), [1])
+
+    def test_unknown_tournament_raises_value_error(self):
+        with self.assertRaises(ValueError):
+            delete_game("DOES_NOT_EXIST", 1, db_path=self.db_path)
+
+    def test_game_can_be_imported_again_after_delete(self):
+        save_game(TOURNAMENT, make_game(1), db_path=self.db_path)
+        delete_game(TOURNAMENT, 1, db_path=self.db_path)
+        save_game(TOURNAMENT, make_game(1), db_path=self.db_path)
+        self.assertEqual(self.game_ids(), [1])
 
 
 

@@ -57,3 +57,12 @@ def delete_tournament(tournament_id, db_path=DB_PATH):
         if tournament_id not in names:
             raise ValueError(f"Could not find {tournament_id}!")
         db.drop_table(tournament_id)
+
+def delete_game(tournament_id, game_id, db_path=DB_PATH):
+    with TinyDB(db_path) as db:
+        table = db.table(tournament_id)
+        Game_Q = Query()
+        game_to_be_deleted = table.get(Game_Q.game_id == game_id)
+        if game_to_be_deleted is None:
+            raise ValueError(f"Could not find {game_id} in {tournament_id}!")
+        table.remove(Game_Q.game_id == game_id)

@@ -48,6 +48,9 @@ def delete_tournament(tournament_id):
 def list_tournaments():
     return src.db_service.list_tournaments()
 
+def delete_game(tournament_id, game_id):
+    src.db_service.delete_game(tournament_id, game_id)
+
 if __name__ == "__main__":
     import_csv("assets/ExampleGame.csv", "EU_DOJO_NR_1")
     for s in show_standings("EU_DOJO_NR_1"):
