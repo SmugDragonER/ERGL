@@ -45,3 +45,15 @@ def set_headbooms(tournament_id, game_id, team_name, headbooms, db_path=DB_PATH)
             raise ValueError(f"Could not find team {team_name} in game {game_id}!")  # AI-ADDED: typo in a team name no longer gets lost silently
 
     save_game(tournament_id, game_obj, db_path)
+
+def list_tournaments(db_path=DB_PATH):
+    with TinyDB(db_path) as db:
+        sorted_all_tables = sorted(t for t in db.tables() if not t.startswith('_'))
+    return sorted_all_tables
+
+def delete_tournament(tournament_id, db_path=DB_PATH):
+    with TinyDB(db_path) as db:
+        names = db.tables()
+        if tournament_id not in names:
+            raise ValueError(f"Could not find {tournament_id}!")
+        db.drop_table(tournament_id)

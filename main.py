@@ -42,6 +42,12 @@ def preview_png(tournament_id, layout_path=MAIN_LAYOUT_PATH):
     standings = show_standings(tournament_id)
     return src.generate_png.render_png(standings, layout_path)
 
+def delete_tournament(tournament_id):
+    src.db_service.delete_tournament(tournament_id)
+
+def list_tournaments():
+    return src.db_service.list_tournaments()
+
 if __name__ == "__main__":
     import_csv("assets/ExampleGame.csv", "EU_DOJO_NR_1")
     for s in show_standings("EU_DOJO_NR_1"):

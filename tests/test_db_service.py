@@ -26,7 +26,8 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-from src.db_service import is_game_saved, load_leaderboard, save_game, set_headbooms
+from src.db_service import (delete_tournament, is_game_saved, list_tournaments, load_leaderboard, save_game,
+                            set_headbooms)
 from src.models import HEADBOOM_PENALTY, Game, GameEntryPerTeam, Leaderboard, Team
 
 TOURNAMENT = "TEST_TOURNAMENT"
@@ -239,6 +240,55 @@ class TestSetHeadbooms(DbTestCase):
             set_headbooms(TOURNAMENT, 1, "Nobody", 3, db_path=self.db_path)
         self.assertEqual(self.entry("Alpha").headbooms, 0)
         self.assertEqual(self.entry("Beta").headbooms, 0)
+
+
+# AI-GENERATED (Claude): tests for list_tournaments and delete_tournament
+class TestListTournaments(DbTestCase):
+    def test_empty_database_returns_empty_list(self):
+        self.assertEqual(list_tournaments(db_path=self.db_path), [])
+
+    def test_returns_all_tournaments_sorted(self):
+        save_game("ZULU_CUP", make_game(1), db_path=self.db_path)
+        save_game("ALPHA_CUP", make_game(1), db_path=self.db_path)
+        self.assertEqual(list_tournaments(db_path=self.db_path), ["ALPHA_CUP", "ZULU_CUP"])
+
+    def test_hides_internal_tables_starting_with_underscore(self):
+        save_game("ALPHA_CUP", make_game(1), db_path=self.db_path)
+        save_game("_settings", make_game(1), db_path=self.db_path)
+        save_game("_default", make_game(1), db_path=self.db_path)
+        self.assertEqual(list_tournaments(db_path=self.db_path), ["ALPHA_CUP"])
+
+    def test_returns_a_list(self):
+        save_game("ALPHA_CUP", make_game(1), db_path=self.db_path)
+        self.assertIsInstance(list_tournaments(db_path=self.db_path), list)
+
+
+class TestDeleteTournament(DbTestCase):
+    def test_deleted_tournament_is_gone(self):
+        save_game("ALPHA_CUP", make_game(1), db_path=self.db_path)
+        delete_tournament("ALPHA_CUP", db_path=self.db_path)
+        self.assertNotIn("ALPHA_CUP", list_tournaments(db_path=self.db_path))
+
+    def test_deleted_tournament_has_no_games_left(self):
+        save_game("ALPHA_CUP", make_game(1), db_path=self.db_path)
+        save_game("ALPHA_CUP", make_game(2), db_path=self.db_path)
+        delete_tournament("ALPHA_CUP", db_path=self.db_path)
+        self.assertEqual(load_leaderboard("ALPHA_CUP", db_path=self.db_path).games, [])
+
+    def test_other_tournaments_are_kept_with_their_games(self):
+        save_game("ALPHA_CUP", make_game(1), db_path=self.db_path)
+        save_game("BETA_CUP", make_game(1), db_path=self.db_path)
+        save_game("BETA_CUP", make_game(2), db_path=self.db_path)
+        delete_tournament("ALPHA_CUP", db_path=self.db_path)
+        self.assertEqual(list_tournaments(db_path=self.db_path), ["BETA_CUP"])
+        self.assertEqual(len(load_leaderboard("BETA_CUP", db_path=self.db_path).games), 2)
+
+    def test_unknown_tournament_raises_value_error(self):
+        save_game("ALPHA_CUP", make_game(1), db_path=self.db_path)
+        with self.assertRaises(ValueError):
+            delete_tournament("DOES_NOT_EXIST", db_path=self.db_path)
+        self.assertEqual(list_tournaments(db_path=self.db_path), ["ALPHA_CUP"])
+
 
 
 if __name__ == "__main__":

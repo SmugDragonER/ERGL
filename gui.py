@@ -19,24 +19,24 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from PIL import Image, ImageTk
 
-from main import (create_mini_png, create_png, import_csv, load_games, preview_png, set_headbooms,
-                  show_bans, show_standings)
+from main import (create_mini_png, create_png, delete_tournament, import_csv, list_tournaments, load_games,
+                  preview_png, set_headbooms, show_bans, show_standings)
 from src.models import HEADBOOM_PENALTY
 from src.paths import MAIN_LAYOUT_PATH, MINI_LAYOUT_PATH
 
-# Welche Layouts es gibt (Name in der Vorschau -> Datei)
+# Available layouts (name shown in the preview -> file)
 LAYOUTS = {
     "Main leaderboard": MAIN_LAYOUT_PATH,
     "Mini leaderboard": MINI_LAYOUT_PATH,
 }
 
 # --------------------------------------------------------------------------
-# Farben (passend zum Leaderboard.png: dunkel, Gold, Rot)
+# Colors (matching Leaderboard.png: dark, gold, red)
 # --------------------------------------------------------------------------
-BG = "#14161c"          # Fensterhintergrund
-CARD = "#1e212b"        # Hintergrund der "Karten"
-FIELD = "#2a2e3a"       # Eingabefelder / Tabellenzeilen
-FIELD_ALT = "#242833"   # jede zweite Tabellenzeile
+BG = "#14161c"          # window background
+CARD = "#1e212b"        # background of the "cards"
+FIELD = "#2a2e3a"       # input fields / table rows
+FIELD_ALT = "#242833"   # every second table row
 HOVER = "#363b4a"
 TEXT = "#e8e8ec"
 MUTED = "#8a8f9c"
@@ -44,18 +44,18 @@ GOLD = "#ffd084"
 RED = "#fd6160"
 
 DEFAULT_TOURNAMENT = "EU_DOJO_NR_1"
-PREVIEW_SIZE = (960, 540)      # Vorschau = halbe Größe von 1920x1080
+PREVIEW_SIZE = (960, 540)      # preview = half of 1920x1080
 
 
 # --------------------------------------------------------------------------
-# Kleine Helfer
+# Small helpers
 # --------------------------------------------------------------------------
 def set_status(text, color=MUTED):
     status_label.config(text=text, foreground=color)
 
 
 def get_tournament(warn=True):
-    """Turniername aus dem Eingabefeld, oder None (+ Warnung) wenn leer."""
+    """Tournament name from the input field, or None (+ warning) if empty."""
     name = tournament.get().strip()
     if not name and warn:
         messagebox.showwarning("Tournament missing", "Please enter a tournament name first.")
@@ -63,8 +63,8 @@ def get_tournament(warn=True):
 
 
 def make_table(parent, columns):
-    """Baut eine Tabelle (Treeview) mit Scrollbar.
-    columns = Liste aus (id, Überschrift, Breite, Ausrichtung)."""
+    """Builds a table (Treeview) with a scrollbar.
+    columns = list of (id, heading, width, anchor)."""
     frame = ttk.Frame(parent, style="Card.TFrame")
     frame.pack(fill="both", expand=True)
 
@@ -91,11 +91,11 @@ def clear(tree):
 
 
 # --------------------------------------------------------------------------
-# Button-Funktionen
+# Button functions
 # --------------------------------------------------------------------------
 def on_choose_folder():
     folder = filedialog.askdirectory(title="Choose the folder with the CSV files")
-    if folder:                      # leer = Nutzer hat "Abbrechen" gedrückt
+    if folder:                      # empty = user clicked "Cancel"
         csv_folder.set(folder)
         count = len(list(Path(folder).glob("*.csv")))
         set_status(f"Found {count} CSV file(s) in the folder.")
@@ -124,7 +124,7 @@ def on_choose_mini_output():
 
 
 def default_mini_path(main_path):
-    """leaderboard.png -> leaderboard_mini.png (im selben Ordner)."""
+    """leaderboard.png -> leaderboard_mini.png (in the same folder)."""
     p = Path(main_path)
     return str(p.with_name(f"{p.stem}_mini{p.suffix}"))
 
@@ -150,7 +150,7 @@ def on_import():
                 new += 1
             else:
                 skipped += 1
-        except Exception as e:      # eine kaputte CSV soll nicht alles abbrechen
+        except Exception as e:      # one broken CSV should not stop the whole import
             errors.append(f"{csv_file.name}: {e}")
 
     refresh_all()
@@ -163,16 +163,42 @@ def on_import():
         set_status(text + " ✓", GOLD)
 
 
+def on_delete_tournament():
+    name = get_tournament()
+    if name is None:
+        return
+    if name not in list_tournaments():
+        messagebox.showinfo("Not saved", f"There is no saved tournament called {name}.")
+        return
+    if not messagebox.askyesno(
+            "Delete tournament",
+            f"Delete tournament {name} and all its games?\n\n"
+            "Manually entered headbooms are lost too. This cannot be undone.",
+            icon="warning"):
+        return
+
+    try:
+        delete_tournament(name)
+    except Exception as e:
+        messagebox.showerror("Could not delete", str(e))
+        return
+
+    remaining = list_tournaments()
+    tournament.set(remaining[-1] if remaining else "")    # switch to another tournament (or empty)
+    refresh_all()
+    set_status(f"Tournament {name} deleted ✓", GOLD)
+
+
 def on_create_png():
     name = get_tournament()
     if name is None:
         return
     if not output_path.get():
-        on_choose_output()          # noch kein Ziel? Dann jetzt fragen
+        on_choose_output()          # no target yet? Ask now
         if not output_path.get():
             return
 
-    if not mini_output_path.get():  # kein eigenes Mini-Ziel? -> neben das große Bild
+    if not mini_output_path.get():  # no mini target? -> put it next to the main image
         mini_output_path.set(default_mini_path(output_path.get()))
 
     try:
@@ -184,11 +210,11 @@ def on_create_png():
 
     set_status(f"Saved: {Path(output_path.get()).name} + {Path(mini_output_path.get()).name} ✓", GOLD)
     if open_after.get():
-        os.startfile(output_path.get())     # öffnet das Bild (nur Windows)
+        os.startfile(output_path.get())     # opens the image (Windows only)
 
 
 # --------------------------------------------------------------------------
-# Vorschau-Fenster
+# Preview window
 # --------------------------------------------------------------------------
 preview = {"window": None, "label": None, "info": None, "hint": None, "mtime": None}
 
@@ -198,12 +224,12 @@ def preview_is_open():
 
 
 def selected_layout():
-    """Pfad des Layouts, das in der Vorschau gewählt ist."""
+    """Path of the layout selected in the preview."""
     return LAYOUTS[preview_board.get()]
 
 
 def layout_mtime():
-    """Zeitpunkt der letzten Änderung des gewählten Layouts (oder None, wenn es fehlt)."""
+    """Last modification time of the selected layout (or None if it is missing)."""
     try:
         return selected_layout().stat().st_mtime
     except OSError:
@@ -211,11 +237,11 @@ def layout_mtime():
 
 
 def fit_preview(img):
-    """Bild so skalieren, dass es in PREVIEW_SIZE passt.
-    Große Bilder werden glatt verkleinert, kleine (Mini-Board) pixelgenau vergrößert."""
+    """Scale the image so it fits into PREVIEW_SIZE.
+    Big images are scaled down smoothly, small ones (mini board) are scaled up pixel-perfect."""
     scale = min(PREVIEW_SIZE[0] / img.width, PREVIEW_SIZE[1] / img.height)
     if scale >= 1:
-        scale = int(scale)              # ganze Zahl -> jeder Pixel wird ein sauberes Quadrat
+        scale = int(scale)              # whole number -> every pixel becomes a clean square
         resample = Image.NEAREST
     else:
         resample = Image.LANCZOS
@@ -224,7 +250,7 @@ def fit_preview(img):
 
 
 def render_preview():
-    """Bild neu zeichnen (ohne zu speichern) und im Vorschau-Fenster anzeigen."""
+    """Redraw the image (without saving) and show it in the preview window."""
     if not preview_is_open():
         return
     name = get_tournament(warn=False)
@@ -233,7 +259,7 @@ def render_preview():
         return
     try:
         img = preview_png(name, selected_layout())
-    except Exception as e:      # z.B. Tippfehler in der Layout-Datei -> anzeigen statt abstürzen
+    except Exception as e:      # e.g. a typo in the layout file -> show it instead of crashing
         preview["info"].config(text=f"Error: {e}", foreground=RED)
         return
 
@@ -241,7 +267,7 @@ def render_preview():
     img, scale = fit_preview(img)
     photo = ImageTk.PhotoImage(img, master=preview["window"])
     preview["label"].config(image=photo)
-    preview["label"].image = photo              # Referenz behalten, sonst bleibt das Bild leer!
+    preview["label"].image = photo              # keep a reference, otherwise the image stays empty!
     preview["info"].config(
         text=f"{original_size[0]}×{original_size[1]} px, shown at {scale:g}×  ·  "
              f"updated {time.strftime('%H:%M:%S')}",
@@ -249,14 +275,14 @@ def render_preview():
 
 
 def on_switch_board(event=None):
-    """Anderes Layout in der Vorschau gewählt -> dieses beobachten und neu zeichnen."""
+    """Another layout was selected in the preview -> watch that one and redraw."""
     preview["mtime"] = layout_mtime()
     preview["hint"].config(text=f"Updates automatically when you save {selected_layout().name}.")
     render_preview()
 
 
 def watch_layout():
-    """Jede Sekunde prüfen, ob layout.json gespeichert wurde -> dann neu zeichnen."""
+    """Check every second whether the selected layout file was saved -> then redraw."""
     if not preview_is_open():
         return
     mtime = layout_mtime()
@@ -272,14 +298,14 @@ def close_preview():
 
 
 def on_preview():
-    if preview_is_open():                       # schon offen? Nach vorne holen + neu zeichnen
+    if preview_is_open():                       # already open? Bring to front + redraw
         preview["window"].lift()
         render_preview()
         return
 
     win = tk.Toplevel(root)
     win.title("Leaderboard Preview")
-    win.transient(root)         # bleibt immer über dem Hauptfenster
+    win.transient(root)         # always stays above the main window
     win.configure(bg=BG)
     win.resizable(False, False)
     win.protocol("WM_DELETE_WINDOW", close_preview)
@@ -304,13 +330,13 @@ def on_preview():
 
     preview.update(window=win, label=label, info=info, hint=hint, mtime=layout_mtime())
     render_preview()
-    win.lift()                  # Vorschau vor das Hauptfenster holen
+    win.lift()                  # bring the preview in front of the main window
     win.focus_force()
     root.after(1000, watch_layout)
 
 
 def on_edit_layout():
-    """Das in der Vorschau gewählte Layout im Standard-Editor öffnen (Fallback: Notepad)."""
+    """Open the layout selected in the preview in the default editor (fallback: Notepad)."""
     path = selected_layout()
     try:
         os.startfile(path)
@@ -319,21 +345,21 @@ def on_edit_layout():
 
 
 def on_edit_headbooms(event=None):
-    """Doppelklick / Button: Headbooms für das gewählte Team im gewählten Game setzen."""
+    """Double-click / button: set headbooms for the selected team in the selected game."""
     selected = headboom_table.selection()
     game = games_by_label.get(game_choice.get())
     if not selected or game is None:
         messagebox.showinfo("Nothing selected", "Please select a game and a team first.")
         return
 
-    team_name = selected[0]         # die Zeilen-ID ist der Teamname (siehe refresh_headboom_table)
+    team_name = selected[0]         # the row ID is the team name (see refresh_headboom_table)
     current = headboom_table.set(team_name, "hb")
     value = simpledialog.askinteger(
         "Headbooms",
         f"Headbooms for {team_name}\nin game {game.game_id}:\n\n(-{HEADBOOM_PENALTY:g} points each)",
         initialvalue=int(current), minvalue=0, parent=root,
     )
-    if value is None:               # Abbrechen
+    if value is None:               # Cancel
         return
 
     try:
@@ -348,16 +374,25 @@ def on_edit_headbooms(event=None):
 
 
 # --------------------------------------------------------------------------
-# Tabellen neu füllen
+# Refill the tables
 # --------------------------------------------------------------------------
-games_by_label = {}     # "Game 1  ·  ID 63716452" -> Game-Objekt
+games_by_label = {}     # "Game 1  ·  ID 63716452" -> Game object
 
 
 def refresh_all(event=None):
+    refresh_tournament_list()
     refresh_standings()
     refresh_games()
     refresh_bans()
-    render_preview()        # macht nichts, wenn die Vorschau nicht offen ist
+    render_preview()        # does nothing if the preview is not open
+
+
+def refresh_tournament_list():
+    """Fill the tournament dropdown with all tournaments saved in the DB."""
+    try:
+        tournament_combo["values"] = list_tournaments()
+    except Exception as e:
+        set_status(f"Could not load tournaments: {e}", RED)
 
 
 def refresh_standings():
@@ -374,7 +409,7 @@ def refresh_standings():
 
     for i, s in enumerate(standings):
         tags = ["odd" if i % 2 else "even"]
-        if s.checkpoint:                # Checkpoint (rot) hat Vorrang vor Top 3 (gold)
+        if s.checkpoint:                # checkpoint teams are shown in red
             tags.append("checkpoint")
         standings_table.insert("", "end", values=(f"#{s.rank}", s.team.team_name,
                                                   s.p1_tk, s.p2_tk, f"{s.points:g}"), tags=tags)
@@ -383,7 +418,7 @@ def refresh_standings():
 
 
 def refresh_games():
-    """Game-Auswahl (Combobox) neu füllen, gewähltes Game möglichst behalten."""
+    """Refill the game selection (combobox), keep the selected game if possible."""
     games_by_label.clear()
     name = get_tournament(warn=False)
     games = load_games(name) if name else []
@@ -393,7 +428,7 @@ def refresh_games():
     labels = list(games_by_label)
     game_combo["values"] = labels
     if game_choice.get() not in games_by_label:
-        game_choice.set(labels[-1] if labels else "")     # neuestes Game vorauswählen
+        game_choice.set(labels[-1] if labels else "")     # preselect the newest game
     refresh_headboom_table()
 
 
@@ -402,7 +437,7 @@ def refresh_headboom_table(event=None):
     game = games_by_label.get(game_choice.get())
     if game is None:
         return
-    # nach Platzierung sortiert, damit Zeilen beim Eintragen nicht herumspringen
+    # sorted by placement so rows don't jump around while editing
     for i, e in enumerate(sorted(game.entries, key=lambda e: e.placement)):
         tags = ["odd" if i % 2 else "even"]
         if e.headbooms:
@@ -416,7 +451,7 @@ def refresh_bans():
     name = get_tournament(warn=False)
     bans = show_bans(name) if name else {}
 
-    # längster Ban zuerst, danach alphabetisch
+    # longest ban first, then alphabetical
     for i, (character, games_left) in enumerate(sorted(bans.items(), key=lambda b: (-b[1], b[0]))):
         tags = ["odd" if i % 2 else "even"]
         text = "next game" if games_left == 1 else f"next {games_left} games"
@@ -427,7 +462,7 @@ def refresh_bans():
 
 
 # --------------------------------------------------------------------------
-# Fenster
+# Window
 # --------------------------------------------------------------------------
 root = tk.Tk()
 root.title("EU DOJO Leaderboard")
@@ -435,20 +470,20 @@ root.geometry("780x800")
 root.minsize(660, 640)
 root.configure(bg=BG)
 
-# "Pinnwände", die alle Funktionen sehen können
+# shared variables ("pinboards") that every function can see
 tournament = tk.StringVar(value=DEFAULT_TOURNAMENT)
 csv_folder = tk.StringVar()
 output_path = tk.StringVar()
 open_after = tk.BooleanVar(value=True)
 game_choice = tk.StringVar()
 mini_output_path = tk.StringVar()
-preview_board = tk.StringVar(value="Main leaderboard")   # welches Layout die Vorschau zeigt
+preview_board = tk.StringVar(value="Main leaderboard")   # which layout the preview shows
 
 # --------------------------------------------------------------------------
-# Styles (Aussehen aller ttk-Widgets an einer Stelle)
+# Styles (look of all ttk widgets in one place)
 # --------------------------------------------------------------------------
 style = ttk.Style()
-style.theme_use("clam")     # "clam" lässt sich am besten umfärben
+style.theme_use("clam")     # "clam" is the easiest theme to recolor
 
 style.configure(".", background=BG, foreground=TEXT, font=("Segoe UI", 10))
 style.configure("TFrame", background=BG)
@@ -469,11 +504,11 @@ style.configure("TEntry", fieldbackground=FIELD, foreground=TEXT, insertcolor=TE
                 bordercolor=FIELD, lightcolor=FIELD, darkcolor=FIELD, padding=6)
 
 style.configure("TCombobox", fieldbackground=FIELD, background=FIELD, foreground=TEXT,
-                arrowcolor=MUTED, bordercolor=FIELD, lightcolor=FIELD, darkcolor=FIELD, padding=6)
+                insertcolor=TEXT, arrowcolor=MUTED, bordercolor=FIELD, lightcolor=FIELD, darkcolor=FIELD, padding=6)
 style.map("TCombobox", fieldbackground=[("readonly", FIELD)], foreground=[("readonly", TEXT)],
           selectbackground=[("readonly", FIELD)], selectforeground=[("readonly", TEXT)],
           background=[("active", HOVER)])
-root.option_add("*TCombobox*Listbox.background", FIELD)      # die aufklappende Liste
+root.option_add("*TCombobox*Listbox.background", FIELD)      # the dropdown list
 root.option_add("*TCombobox*Listbox.foreground", TEXT)
 root.option_add("*TCombobox*Listbox.selectBackground", HOVER)
 root.option_add("*TCombobox*Listbox.font", ("Segoe UI", 10))
@@ -511,7 +546,7 @@ style.map("TNotebook.Tab", background=[("selected", CARD), ("active", CARD)],
           foreground=[("selected", GOLD)], lightcolor=[("selected", CARD)])
 
 # --------------------------------------------------------------------------
-# Kopfzeile
+# Header
 # --------------------------------------------------------------------------
 header = ttk.Frame(root, padding=(20, 16, 20, 8))
 header.pack(fill="x")
@@ -520,23 +555,26 @@ ttk.Label(header, text="A Tool created by SmugDragon to assist with Tournaments"
           style="Subtitle.TLabel").pack(anchor="w")
 
 # --------------------------------------------------------------------------
-# Karte: Einstellungen
+# Card: settings
 # --------------------------------------------------------------------------
 settings = ttk.Frame(root, style="Card.TFrame", padding=16)
 settings.pack(fill="x", padx=20, pady=8)
-settings.columnconfigure(1, weight=1)       # mittlere Spalte wächst mit
+settings.columnconfigure(1, weight=1)       # middle column grows with the window
 
 ttk.Label(settings, text="Settings", style="Section.TLabel").grid(
     row=0, column=0, columnspan=3, sticky="w", pady=(0, 10))
 
-# Turnier
+# Tournament
 ttk.Label(settings, text="Tournament", style="Card.TLabel").grid(row=1, column=0, sticky="w", padx=(0, 12))
-tournament_entry = ttk.Entry(settings, textvariable=tournament)
-tournament_entry.grid(row=1, column=1, columnspan=2, sticky="ew", pady=4)
-tournament_entry.bind("<Return>", refresh_all)      # Enter -> alles neu laden
-tournament_entry.bind("<FocusOut>", refresh_all)
+# Editable dropdown: pick a saved tournament OR type a new name
+tournament_combo = ttk.Combobox(settings, textvariable=tournament)
+tournament_combo.grid(row=1, column=1, sticky="ew", pady=4, padx=(0, 8))
+tournament_combo.bind("<<ComboboxSelected>>", refresh_all)     # picked from the list
+tournament_combo.bind("<Return>", refresh_all)                 # Enter -> reload everything
+tournament_combo.bind("<FocusOut>", refresh_all)
+ttk.Button(settings, text="Delete…", command=on_delete_tournament).grid(row=1, column=2, sticky="e", pady=4)
 
-# CSV-Ordner
+# CSV folder
 ttk.Label(settings, text="CSV folder", style="Card.TLabel").grid(row=2, column=0, sticky="w", padx=(0, 12))
 ttk.Label(settings, textvariable=csv_folder, style="Muted.TLabel").grid(row=2, column=1, sticky="w")
 ttk.Button(settings, text="Choose folder…", command=on_choose_folder).grid(row=2, column=2, sticky="e", pady=4)
@@ -546,13 +584,13 @@ ttk.Label(settings, text="PNG output", style="Card.TLabel").grid(row=3, column=0
 ttk.Label(settings, textvariable=output_path, style="Muted.TLabel").grid(row=3, column=1, sticky="w")
 ttk.Button(settings, text="Choose file…", command=on_choose_output).grid(row=3, column=2, sticky="e", pady=4)
 
-# Mini-Output (leer = automatisch "<name>_mini.png" neben dem großen Bild)
+# Mini output (empty = automatically "<name>_mini.png" next to the main image)
 ttk.Label(settings, text="Mini PNG output", style="Card.TLabel").grid(row=4, column=0, sticky="w", padx=(0, 12))
 ttk.Label(settings, textvariable=mini_output_path, style="Muted.TLabel").grid(row=4, column=1, sticky="w")
 ttk.Button(settings, text="Choose file…", command=on_choose_mini_output).grid(row=4, column=2, sticky="e", pady=4)
 
 # --------------------------------------------------------------------------
-# Aktions-Buttons
+# Action buttons
 # --------------------------------------------------------------------------
 actions = ttk.Frame(root, style="Card.TFrame", padding=16)
 actions.pack(fill="x", padx=20, pady=8)
@@ -565,7 +603,7 @@ ttk.Button(actions, text="Edit layout…", command=on_edit_layout).pack(side="ri
 ttk.Button(actions, text="Preview", command=on_preview).pack(side="right", padx=10)
 
 # --------------------------------------------------------------------------
-# Statuszeile (vor den Tabs packen, damit sie immer sichtbar bleibt)
+# Status bar (packed before the tabs so it always stays visible)
 # --------------------------------------------------------------------------
 status_label = ttk.Label(root, text="Ready.", style="Status.TLabel", padding=(20, 4, 20, 12))
 status_label.pack(fill="x", side="bottom")
@@ -628,5 +666,5 @@ bans_table = make_table(bans_tab, [
     ("left", "BANNED FOR", 200, "center"),
 ])
 
-refresh_all()     # beim Start schon gespeicherte Daten anzeigen
+refresh_all()     # show already saved data on startup
 root.mainloop()
